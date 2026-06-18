@@ -1,0 +1,6 @@
+.env
+node_modules/
+route.json
+*.log
+report.json
+report.md

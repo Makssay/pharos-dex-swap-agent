@@ -1,0 +1,34 @@
+{
+  "networks": [
+    {
+      "name": "mainnet",
+      "rpcUrl": "https://rpc.pharos.xyz",
+      "chainId": 1672,
+      "explorerUrl": "https://www.pharosscan.xyz/",
+      "nativeToken": "PROS",
+      "nativeSentinel": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "wpros": "0x52c48d4213107b20bc583832b0d951fb9ca8f0b0",
+      "routeProxy": "0xa5ca5fbe34e444f366b373170541ec6902b0f75c",
+      "knownTokens": {
+        "USDC": {
+          "address": "0xc879c018db60520f4355c26ed1a6d572cdac1815",
+          "decimals": 6
+        },
+        "WPROS": {
+          "address": "0x52c48d4213107b20bc583832b0d951fb9ca8f0b0",
+          "decimals": 18
+        }
+      }
+    },
+    {
+      "name": "atlantic-testnet",
+      "rpcUrl": "https://atlantic.dplabs-internal.com",
+      "chainId": 688689,
+      "explorerUrl": "https://atlantic.pharosscan.xyz/",
+      "nativeToken": "PHRS",
+      "nativeSentinel": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "knownTokens": {}
+    }
+  ],
+  "defaultNetwork": "mainnet"
+}

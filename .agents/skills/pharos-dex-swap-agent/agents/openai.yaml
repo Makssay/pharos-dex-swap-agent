@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pharos DEX Swap Agent"
+  short_description: "Plan, inspect, and guard Pharos DEX swaps"
+  default_prompt: "Use $pharos-dex-swap-agent to inspect a Pharos swap transaction and prepare a safe swap plan."
