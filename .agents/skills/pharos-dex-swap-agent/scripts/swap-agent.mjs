@@ -27,7 +27,7 @@ function parseArgs(argv) {
     const key = argv[i];
     if (!key.startsWith("--")) continue;
     const name = key.slice(2);
-    if (["wrap-pros", "unwrap-wpros", "execute", "yes", "no-color", "allow-unknown-router"].includes(name)) {
+    if (["wrap-pros", "unwrap-wpros", "fetch-route", "execute", "yes", "no-color", "allow-unknown-router"].includes(name)) {
       out[name] = true;
     } else {
       out[name] = argv[i + 1];
@@ -42,6 +42,7 @@ function usage() {
   node scripts/swap-agent.mjs --inspect-tx <hash> [--network mainnet] [--format console|markdown|json]
   node scripts/swap-agent.mjs --wrap-pros --amount 0.1 [--network mainnet]
   node scripts/swap-agent.mjs --unwrap-wpros --amount 0.1 [--network mainnet]
+  node scripts/swap-agent.mjs --fetch-route --from-token PROS --to-token USDC --amount 0.1 --wallet 0x...
   node scripts/swap-agent.mjs --route-file route.json --wallet 0x... [--network mainnet]
   node scripts/swap-agent.mjs --route-file route.json --wallet 0x... --execute --yes`;
 }
@@ -417,6 +418,10 @@ function findApproveTarget(value) {
 async function analyzeRouteFile(net, opts) {
   const routePath = path.resolve(opts["route-file"]);
   const raw = JSON.parse(fs.readFileSync(routePath, "utf8"));
+  return analyzeRoutePayload(net, opts, raw, { routePath });
+}
+
+async function analyzeRoutePayload(net, opts, raw, source = {}) {
   const found = findRouteCandidate(raw);
   if (!found) throw new Error("No transaction-like route object found. Expected fields: to, data, value.");
   const route = found.tx;
@@ -429,7 +434,8 @@ async function analyzeRouteFile(net, opts) {
   const report = {
     type: "route-validation",
     network: net.name,
-    routePath,
+    routePath: source.routePath,
+    routeSource: source.routeSource,
     routeObjectPath: found.path,
     to,
     valueWei: valueWei.toString(),
@@ -443,6 +449,56 @@ async function analyzeRouteFile(net, opts) {
   await routeChecks(net, opts, report, valueWei);
   if (opts.execute) await executeRoute(net, opts, report, valueWei, raw);
   return report;
+}
+
+async function fetchRoute(net, opts) {
+  if (!opts.wallet) throw new Error("--fetch-route requires --wallet so the route API can build user-specific calldata");
+  const apiKey = opts["api-key"] || process.env.DODO_API_KEY || process.env.FAROSWAP_API_KEY;
+  if (!apiKey) {
+    throw new Error("--fetch-route requires DODO_API_KEY or FAROSWAP_API_KEY in the local environment. Do not search the web for a bypass; FaroSwap docs say developer API access is required.");
+  }
+  const from = resolveTokenInput(net, opts["from-token"]);
+  const to = resolveTokenInput(net, opts["to-token"]);
+  if (!from || !to || !opts.amount) throw new Error("--fetch-route requires --from-token, --to-token, and --amount");
+  const fromInfo = from.native ? from : await describeToken(net, from.address);
+  const toInfo = to.native ? to : await describeToken(net, to.address);
+  const fromAmount = parseUnits(opts.amount, fromInfo.decimals);
+  const apiUrl = opts["route-api"] || net.dodoRouteApiUrl || "https://api.dodoex.io/route-service/developer/getdodoroute";
+  const url = new URL(apiUrl);
+  url.searchParams.set("fromTokenAddress", fromInfo.address);
+  url.searchParams.set("fromTokenDecimals", String(fromInfo.decimals));
+  url.searchParams.set("toTokenAddress", toInfo.address);
+  url.searchParams.set("toTokenDecimals", String(toInfo.decimals));
+  url.searchParams.set("fromAmount", fromAmount.toString());
+  url.searchParams.set("slippage", String(opts.slippage || "1"));
+  url.searchParams.set("userAddr", normalizeAddress(opts.wallet));
+  url.searchParams.set("chainId", String(net.chainId));
+  url.searchParams.set("rpc", opts["rpc-url"] || net.rpcUrl);
+  url.searchParams.set("apikey", apiKey);
+
+  const res = await fetch(url, { headers: { "User-Agent": "Pharos-DEX-Swap-Agent" } });
+  let json;
+  try {
+    json = await res.json();
+  } catch {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Route API returned non-JSON response (${res.status}): ${text.slice(0, 240)}`);
+  }
+  if (!res.ok || ![200, "200"].includes(json.status)) {
+    const message = json.message || json.error || JSON.stringify(json).slice(0, 300);
+    throw new Error(`Route API failed (${res.status}): ${message}`);
+  }
+  const raw = json.data || json.result || json;
+  const routeReport = await analyzeRoutePayload(net, opts, raw, { routeSource: apiUrl });
+  routeReport.type = "route-fetch-validation";
+  routeReport.request = {
+    fromToken: fromInfo,
+    toToken: toInfo,
+    amountIn: fromAmount.toString(),
+    amountInHuman: `${opts.amount} ${fromInfo.symbol}`,
+    slippage: String(opts.slippage || "1"),
+  };
+  return routeReport;
 }
 
 async function routeChecks(net, opts, report, valueWei) {
@@ -710,6 +766,7 @@ async function main() {
   let report;
   if (opts["inspect-tx"]) report = await inspectTransaction(net, opts["inspect-tx"]);
   else if (opts["route-file"]) report = await analyzeRouteFile(net, opts);
+  else if (opts["fetch-route"]) report = await fetchRoute(net, opts);
   else if (opts["wrap-pros"]) report = buildWrapPlan(net, opts);
   else if (opts["unwrap-wpros"]) report = buildUnwrapPlan(net, opts);
   else if (opts["from-token"] || opts["to-token"]) report = await buildIntentPlan(net, opts);

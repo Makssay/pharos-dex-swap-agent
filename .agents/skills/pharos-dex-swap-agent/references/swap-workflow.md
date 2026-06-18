@@ -45,6 +45,14 @@ mixSwap(address,address,uint256,uint256,uint256,address[],address[],address[],ui
 
 This calldata is route-engine output. Do not recreate it by hand from only token addresses. Require a fresh route JSON/API response or copied transaction calldata.
 
+Official FaroSwap documentation points developers to the DODO developer route API:
+
+```text
+https://api.dodoex.io/route-service/developer/getdodoroute
+```
+
+The endpoint requires developer API access. Use `DODO_API_KEY` or `FAROSWAP_API_KEY` from the local environment. If no API key is available, do not search for bypasses or private frontend endpoints; ask the user for an API key or route JSON.
+
 ## Required preflight checks
 
 - Chain ID matches selected network.
@@ -70,6 +78,26 @@ The script accepts any JSON object containing a nested transaction-like object:
 ```
 
 It also searches common fields such as `tx`, `transaction`, `data.tx`, `route`, `result`, `allowanceTarget`, `approveTo`, and `targetApproveAddr`.
+
+## Fetch route with API key
+
+```powershell
+$env:DODO_API_KEY="developer_api_key_here"
+node scripts/swap-agent.mjs --fetch-route --from-token PROS --to-token USDC --amount 0.1 --wallet 0xYourWallet --network mainnet --format console
+```
+
+The script sends:
+
+- `fromTokenAddress`
+- `fromTokenDecimals`
+- `toTokenAddress`
+- `toTokenDecimals`
+- `fromAmount`
+- `slippage`
+- `userAddr`
+- `chainId`
+- `rpc`
+- `apikey`
 
 ## Execution posture
 

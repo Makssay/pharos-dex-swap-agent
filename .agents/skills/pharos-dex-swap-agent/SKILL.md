@@ -16,7 +16,9 @@ Use this skill for Pharos token swap workflows. Keep read-only analysis separate
 - Do not execute a swap unless the user explicitly requests execution and the command includes `--execute --yes`.
 - For mainnet swaps, show token addresses, amount in, minimum amount out, deadline, router, value, allowance target, and gas estimate before any write.
 - Do not invent a FaroSwap quote. If route calldata is missing, ask for a route JSON/API response or tell the user to fetch a fresh route from FaroSwap/DODO.
+- Do not browse the web to discover route endpoints during execution. The official DODO developer route endpoint requires API access. Use `--fetch-route` only when `DODO_API_KEY` or `FAROSWAP_API_KEY` is set locally.
 - Treat expired route deadlines, unknown routers, stale calldata, insufficient allowance, insufficient balance, and high slippage as blockers unless the user explicitly overrides safe defaults.
+- If `ethers` is missing and execution is requested, install it in the current project with `npm install ethers --no-audit --no-fund` before using `--execute --yes`.
 
 ## Quick Start
 
@@ -44,6 +46,12 @@ Validate a FaroSwap/DODO route JSON before execution:
 node scripts/swap-agent.mjs --route-file route.json --wallet 0xYourWallet --network mainnet --format console
 ```
 
+Fetch and validate a fresh route through the official DODO developer route API when `DODO_API_KEY` or `FAROSWAP_API_KEY` is set:
+
+```powershell
+node scripts/swap-agent.mjs --fetch-route --from-token PROS --to-token USDC --amount 0.1 --wallet 0xYourWallet --network mainnet --format console
+```
+
 Execute only after review:
 
 ```powershell
@@ -58,7 +66,7 @@ node scripts/swap-agent.mjs --route-file route.json --wallet 0xYourWallet --netw
    - Native wrapping: use `--wrap-pros`.
    - Native unwrapping: use `--unwrap-wpros`.
    - Swap from route calldata: use `--route-file`.
-   - Swap by token contract without route data: produce a plan and request fresh route calldata.
+   - Swap by token contract without route data: use `--fetch-route` if a route API key exists; otherwise produce a plan and request `DODO_API_KEY`, `FAROSWAP_API_KEY`, or a fresh route JSON.
 2. Decode known calldata:
    - `0xff84aafa`: `mixSwap(address,address,uint256,uint256,uint256,address[],address[],address[],uint256,bytes[],bytes,uint256)`.
    - `0xd0e30db0`: WPROS `deposit()`.

@@ -9,6 +9,7 @@
       "nativeSentinel": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
       "wpros": "0x52c48d4213107b20bc583832b0d951fb9ca8f0b0",
       "routeProxy": "0xa5ca5fbe34e444f366b373170541ec6902b0f75c",
+      "dodoRouteApiUrl": "https://api.dodoex.io/route-service/developer/getdodoroute",
       "knownTokens": {
         "USDC": {
           "address": "0xc879c018db60520f4355c26ed1a6d572cdac1815",

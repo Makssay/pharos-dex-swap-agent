@@ -17,6 +17,7 @@ Token swaps are high-risk onchain actions: stale routes, expired deadlines, wron
 - Prepare direct `PROS -> WPROS` wrap transactions.
 - Prepare direct `WPROS -> PROS` unwrap transactions.
 - Validate route JSON from FaroSwap/DODO before execution.
+- Fetch a fresh route from the official DODO developer route API when `DODO_API_KEY` or `FAROSWAP_API_KEY` is set locally.
 - Check router bytecode, chain ID, route deadline, native balance, ERC20 balance, allowance, and gas estimate when a wallet is provided.
 - Execute only with `--execute --yes` and a local `PRIVATE_KEY`.
 
@@ -31,7 +32,15 @@ Directly supported:
 - Known `USDC`
 - Any ERC20 token address when a fresh route JSON/calldata is provided
 
-Important: this skill does not invent FaroSwap routes. For normal token swaps, provide fresh route JSON/calldata from FaroSwap/DODO. Wrap/unwrap WPROS does not need a route.
+Important: this skill does not invent FaroSwap routes. For normal token swaps, provide fresh route JSON/calldata from FaroSwap/DODO or set `DODO_API_KEY` / `FAROSWAP_API_KEY` so the skill can call the official developer route API. Wrap/unwrap WPROS does not need a route.
+
+The official route API endpoint is:
+
+```text
+https://api.dodoex.io/route-service/developer/getdodoroute
+```
+
+It requires developer API access. If no API key is available, the skill should stop and ask for a route JSON/API key instead of searching for private frontend endpoints.
 
 ## Install
 
@@ -71,6 +80,13 @@ Plan a token swap by contract address:
 node .\.agents\skills\pharos-dex-swap-agent\scripts\swap-agent.mjs --from-token PROS --to-token 0xc879c018db60520f4355c26ed1a6d572cdac1815 --amount 0.1 --network mainnet --format console
 ```
 
+Fetch and validate a route with API key:
+
+```powershell
+$env:DODO_API_KEY="developer_api_key_here"
+node .\.agents\skills\pharos-dex-swap-agent\scripts\swap-agent.mjs --fetch-route --from-token PROS --to-token USDC --amount 0.1 --wallet 0xYourWallet --network mainnet --format console
+```
+
 Validate a fresh route JSON:
 
 ```powershell
@@ -81,6 +97,7 @@ Execute after review:
 
 ```powershell
 $env:PRIVATE_KEY="local_private_key_here"
+npm install ethers --no-audit --no-fund
 node .\.agents\skills\pharos-dex-swap-agent\scripts\swap-agent.mjs --route-file route.json --wallet 0xYourWallet --network mainnet --execute --yes
 ```
 
